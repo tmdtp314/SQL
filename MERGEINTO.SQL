@@ -1,7 +1,7 @@
 SELECT * FROM MC
 
  select *,datediff(DD,Dt_Customer,(first_value(Dt_Customer) over (order by dt_customer desc))) as [datediff]from mc order by [datediff] 
-
+-- DATEDIFF는 SELECT절과 ORDER BY 절에서만 사용할 수 있다. 
 
 
  merge into MC
@@ -9,7 +9,7 @@ SELECT * FROM MC
    on (V.id=MC.id and [datediff] <20)
    when matched THEN update set [status]='S';
    
- merge into GHOST
+ merge into GHOSTㅍ  -- 유령 회원은 테이블 따로 관리
  using (select *,datediff(DD,Dt_Customer,(first_value(Dt_Customer) over (order by dt_customer desc))) as [datediff]from mc)V
    on (V.id=GHOST.id )
    WHEN MATCHED and V.[datediff] <100 THEN DELETE 
