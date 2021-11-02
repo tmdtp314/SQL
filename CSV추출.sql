@@ -1,3 +1,6 @@
+--활성화 여부 체크--
+SELECT * FROM sys.configurations WHERE name = 'xp_cmdshell'
+
 -----------------------------------------------------------------------
  -- xp_cmdshell활성화 
 EXEC sp_configure 'show advanced options', 1
