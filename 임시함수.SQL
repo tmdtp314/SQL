@@ -1,0 +1,35 @@
+CREATE FUNCTION [dbo].[FN_MEM_11]( 
+     @WKS_ID VARCHAR(20) 
+	,@WKS_01 int	
+	) RETURNS VARCHAR(1000)
+AS
+BEGIN
+    DECLARE @RESULT VARCHAR(1000)
+	SET @RESULT = ''
+	DECLARE @TMP TABLE ( TMPID INT IDENTITY(1,1) NOT NULL, [MEM_11_NM] VARCHAR(20))
+	INSERT INTO @TMP([MEM_11_NM])
+	       SELECT M.MEM_02 
+		     FROM T_WKSM, NSADMIN0.DBO.T_MEM M
+		    WHERE WKSM_02 = M.MEM_01
+			  AND WKSM_ID = M.MEM_CID
+			  AND WKSM_ID = @WKS_ID
+			  AND WKSM_01 = @WKS_01        
+			  AND MEM_11 = 'Y'             -- 조회 조건 
+
+
+----------------------------SPLIT, 반복문 돌리기 -------------------------
+	DECLARE @TMPID AS INT               
+	DECLARE @MAXID AS INT
+	DECLARE @MEM_11_NM VARCHAR(20)
+
+	SELECT @TMPID = MIN(TMPID), @MAXID = MAX(TMPID) FROM @TMP 
+
+	WHILE @TMPID<=@MAXID BEGIN
+	   SELECT @MEM_11_NM=[MEM_11_NM] FROM @TMP WHERE TMPID = @TMPID
+	      SET @TMPID = @TMPID+1
+		  SET @RESULT+=@MEM_11_NM
+    END
+	RETURN @RESULT
+END
+GO
+-------------------------------------------------------
