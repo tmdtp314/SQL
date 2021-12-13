@@ -1,0 +1,48 @@
+
+		SELECT DAH_ID
+	      ,DAH_01                  
+	      ,DAH_02
+		  ,CASE WHEN DAH_03 = 'B' THEN 'EXTRA'
+		        WHEN DAH_03 = 'P' THEN 'PRODUCT'
+				WHEN DAH_03 = 'R' THEN 'RESOURCE' END AS DAH_03
+		  ,DAH_04
+		  ,DAH_13
+		  ,CASE WHEN BB.OOK_STC IS NULL THEN 0 ELSE BB.OOK_STC END AS OOK_STC
+		  ,dbo.FN_CODE_NM2(DAH_ID, 'DEC', 'DEC', DAH_15) AS DAH_15
+		  ,DAH_20
+		  ,CASE DAH_11   WHEN 'N' THEN '없음' 
+				         WHEN 'A' THEN 'GOOD' 
+						 WHEN 'B' THEN 'MULTI'
+			    END AS  DAH_11     
+		  ,CASE DAH_12 WHEN 'N' THEN '없음' 
+				         WHEN '1' THEN '1GRADE' 
+					  	 WHEN '2' THEN '2GRADE'
+					  	 WHEN '3' THEN '3GRADE'
+			    END AS  DAH_12
+		  ,CASE WHEN DAH_10 = 0 THEN CONVERT(varchar(10) , DAH_09) ELSE CONVERT(varchar(10) , DAH_09)+'*'+CONVERT(varchar(10) , DAH_10) END  AS DAH_09_NM
+		  ,CASE WHEN  BB.OOK_STC IS NULL THEN '' ELSE BB.OOK_06 END AS OOK_06
+	
+		  ,CASE WHEN OOK_02 IS NULL THEN '' ELSE dbo.FN_DATE(OOK_02,'1') END AS OOK_02
+		  ,'true' Validation
+	 FROM T_DAH
+	 LEFT OUTER JOIN (SELECT ROW_NUMBER() OVER(PARTITION BY O.OOK_04 ORDER BY O.OOK_99 DESC) AS RN, O.OOK_06, O.OOK_04, O.OOK_01, SUM(AA.OOK_07) OVER (PARTITION BY AA.OOK_04) AS OOK_STC, O.OOK_02
+	               FROM ( SELECT OOK_01, OOK_02, OOK_04, (-1)*OOK_07 AS OOK_07 FROM T_OOK WHERE OOK_06='O'
+				           UNION ALL
+						  SELECT OOK_01, OOK_02, OOK_04, OOK_07 FROM T_OOK WHERE OOK_06='I') AA, T_OOK O
+				  WHERE AA.OOK_01 = O.OOK_01					
+				) BB
+			 ON BB.OOK_04 = DAH_01
+			AND BB.RN=1
+	 LEFT OUTER JOIN T_CDO (NOLOCK) CDO
+	    	 ON CDO_ID =  'XXXX'   
+			 AND CDO_01 = 'GDR'     
+			 AND CDO_02 = DAH_05  
+	  WHERE DAH_06 = 'Y'  -- 관리여부
+
+	 --   AND (DAH_03 = @DAH_03 OR @DAH_03 = '')--
+	--	AND ((DAH_05 = @DAH_05) OR (@DAH_05 = ''))
+	--	AND ((DAH_02 LIKE '%'+ @DAH_02+'%' OR DAH_01 LIKE '%'+@DAH_02+'%') OR( @DAH_02=''))
+	--    AND ((DAH_15 LIKE '%'+dbo.FN_CODE_NM2(DAH_ID, 'DEC', 'DEC', @DAH_15)+'%') OR (@DAH_15=''))
+
+
+	
