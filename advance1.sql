@@ -178,6 +178,107 @@ SELECT O.OrderID, O.CustomerID, *
      
 
 
+/*  의미 오류 : 쿼리 자체에는 문제가 없으나 쿼리의결과가 
+   작성자의 본래 의도와 다르게 나타나는 것 (성능 문제 포함) */
+
+   -- 데이터 일관성 이슈와 잠재적인 성능 이슈 
+
+   /* 불필효한 함수와 조건을 쓰는 것 */
+     -- ex) CHECK(Q>0) select .... where Q<0;
+	 -- pk is null or ...isnull(pk,0)
+	 -- 없는 열에 distinct 쓰는것
+     -- order by 절에 pk열 쓰는 것 
+	 -- where절에 써야 할조건을 groupby의 having절에 쓰는 경우 ****** 성능문제
+	 -- union 쓸 때 중복 결과가 없는 조건에 쓰는것
+	 -- 불필요한 조인
+	    SELECT O.OrderID, O.OrderDate
+		  FROM DBO.ORDERS AS O
+		  INNER JOIN DBO.Customers AS C 
+		     ON O.CustomerID = C.CustomerID  -- 불필요한 조인조건
+	      WHERE O.OrderID=10250; 
+	 -- NOT IN(...) 안에 NULL값이 결과로 오지 않도록
+	 SELECT E.EmployeeID
+	   FROM DBO.Employees AS E
+	  WHERE E.EmployeeID NOT IN (SELECT M.ReportsTo FROM DBO.Employees AS M);
+
+
+	  -- 서브쿼리 내 잘못된 외부 열 참조
+	     SELECT OrderDate
+		   FROM DBO.Orders
+		  WHERE OrderID IN (SELECT OrderID FROM DBO.Customers);
+		  -- 서브쿼리만 실행하면 오류나지만 전체 쿼리 실행 시 작동. 하지만 의도치않은 결과 도출
+		  -- 전체 조회됨
+
+	  -- 원하는 결과인가?
+	   SELECT 50 ORDERID
+	     FROM DBO.Orders
+		WHERE CustomerID='QUICK'
+		ORDER BY OrderDate
+
+
+	  -- INNER 조인에 해당하는 OUTER조인 --> 참 많은 케이스
+       SELECT M.EmployeeID AS ReportsTo, M.LastName, E.EmployeeID, E.Title
+	     FROM DBO.Employees AS M
+		 LEFT JOIN DBO.Employees AS E
+		        ON M.EmployeeID=E.ReportsTo  -- 자기참조 
+		WHERE E.Title='Sales Manager'  -- M이 아닌 E를 기준으로 조건문 쓴 결과
+
+		--쿼리문은 OUTER JOIN일지라도 실행계획 보면 INNERJOIN 수행됨
+
+
+		/* 요약 : 많은 경우 옵티마이저가 자동으로 성능 문제 해결해주지만 애초 작성시 좋은 쿼리로 작성해야..  */
+
+
+/***************쿼리 금기 사항*****************/
+/*1. SEARCH ARGUMENT 란...? 
+    Predicate 에서 검색 대상 및 범위를 제한 할 수 있는 식
+	(Predicate -> TRUE, FALSE, UNKNOWN 등 BOOLEAN값으로 표현되는 식)
+	테이블 전체를 뒤지면서 대상을 조회하지 않도록 구성해야 한다. 
+*/
+
+
+/*2. SARG위반 (NON-SARG유형) - 이 경우 INDEX있어도 아예 못쓰는 경우가 발생 
+  
+	 - 검색을 제한하지 않는 식(테이블 전체를 다 훑는다)
+	 - 인덱스 사용이나 쿼리 최적화에 방해되는 요소를 일컫는다
+	 - 인덱스를 만들 경우 쓸 수 없게 된다
+*/
+  -- 불필요한 열 참조
+      SELECT CategoryID,CategoryName FROM DBO.Categories 
+      --VS
+      SELECT * FROM DBO.Categories
+      
+     
+      SELECT OrderID FROM DBO.Orders  -- 인덱스가 ORDERID에 있는 경우 
+	  --VS
+      SELECT OrderID,OrderDate FROM DBO.Orders 
+
+  -- 불필요한 행 검색 : 추가 검색 조건이나 적절한 TOP(PagIng) 처리 필요
+
+  -- INDEX열에 부정형 사용 주의
+     /* 참고: 조건은 "="이 가장 빠르고 효율적 
+	    불필요한 부정형(->범위검색으로 자동 전환됨)은 지양
+		검색 범위가 적다면 긍정조건&"=" 조건으로 구현
+
+		ID <> 3           --->   ID > 3 OR ID < 3
+		ID !> 10248       --->   ID <= 10248
+		ID NOT IN(1,3,5)  --->   ID <> 1 AND ID<> 3 AND ID<>5
+		ID IN (2,4,6)     --->   ID = 1 OR ID=2 OR ID=3
+
+	  ** NOT IN은 최후의 보루...최대한 안쓰는게 좋다 **
+	  ** 인덱스 쓸 때 효율성이 떨어진다 **
+	  복합 인덱스 선행 열에 순차적으로 위의 내용이 적용됨(적,필,상처럼..)
+	  따라서 적에 해당하는 인덱스열에 LIKE가 들어가면 후(필,상)이 "="조건으로
+	  되어있더라도 인덱스 상실하게됨. 
+	 
+	 */
+
+
+/*3. 조건절 상수화 이슈(테이블변수VS임시테이블변수) */
+/*4. 테이블 변수 최적화 이슈*/
+
+
+
 
 
    
