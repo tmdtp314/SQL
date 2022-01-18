@@ -43,3 +43,49 @@
 	 -- OrderDate LIKE '05% 1990%' >> 암시적 형변환 발생
 
    
+  
+  /**열 간 비교되지 않도록 다른 형식으로 구현**/
+
+  SELECT ...
+    FROM Northwind.dbo.Orders
+   WHERE OrderID = COALESCE(@OrderID,OrderID)
+     AND CustomerID = COALESCE(@CustomerID,CustomerID)
+  -- 만능조회 (마치 검색조건이 없는것처럼)
+  -- 다중 ISNULL이라고 이해하면 됨
+
+     DECLARE @OrderID INT = 10239;
+     DECLARE @OrderDate DATETIME ='20211204'
+     DECLARE @CustomerID NCHAR(10) = NULL;
+
+     SELECT *
+       FROM Northwind.dbo.Orders
+      WHERE OrderID = COALESCE(@OrderID,OrderID)
+        AND OrderDate = COALESCE(@OrderDate,OrderDate)
+        AND CustomerID = COALESCE(@CustomerID,CustomerID)
+    -- 이러면 인덱스 사용 안됨
+
+------------ CAOLESCE 함수 ---------
+    --  다중 ISNULL()의 축약식
+    DECLARE
+      @B_Code int = NULL
+    , @A_Code int = NULL
+    , @C_Code int = 10248
+    
+    SELECT COALESCE(@A_Code,@B_Code,@C_Code)
+      -- 10248 반환
+-----------------------------------
+/*******NON-SARG사례*************/
+ WHERE ISNULL(ShipRegion,'') = 'RJ'
+
+ WHERE LEN(일련번호)=8
+ ---> LIKE쓰던지 바꿔줘야함 
+
+ WHERE A.제품번호 = B.제품번호
+   AND (CASE A.코드구분 WHEN 'C' THEN A.C_코드
+                        ELSE A.D_코드
+                         END )='123456789'
+  --> CASE문으로 컬럼변형. 인덱스 못씀 
+  --> IF문식 AND-OR로 바꿔주자
+  WHERE ((A.코드구분='C' AND A.C_코드 = '123456789')
+          OR
+         (A.코드구분!='C' AND A.D_코드='123456789'))
